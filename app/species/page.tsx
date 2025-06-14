@@ -77,7 +77,7 @@ export default function SpeciesPage() {
 
   const fetchFilms = async () => {
     try {
-      const response = await fetch('https://swapi.py4e.com/api/api/films/');
+      const response = await fetch('https://swapi.py4e.com/api/films/');
       const data = await response.json();
       const sortedFilms = data.results.sort(
         (a: IFilm, b: IFilm) => a.episode_id - b.episode_id

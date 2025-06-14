@@ -63,7 +63,7 @@ export default function PlanetsPage() {
   const fetchAllPlanets = async () => {
     try {
       let allPlanets: Planet[] = [];
-      let nextUrl = 'https://swapi.py4e.com/api/api/planets/';
+      let nextUrl = 'https://swapi.py4e.com/api/planets/';
 
       while (nextUrl) {
         const response = await fetch(nextUrl);
