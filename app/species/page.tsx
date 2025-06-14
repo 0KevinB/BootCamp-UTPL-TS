@@ -1,9 +1,8 @@
 'use client';
 
 import type React from 'react';
-
 import { useState, useEffect } from 'react';
-import { Film, Users, BarChart3, TrendingUp } from 'lucide-react';
+import { Film, Users, BarChart3, TrendingUp, X } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -30,8 +29,14 @@ interface IFilm {
   release_date: string;
 }
 
+// Interfaz para almacenar los personajes junto con su especie
+interface SpeciesCharacterData {
+  name: string;
+  characters: { name: string }[];
+}
+
 interface SpeciesCount {
-  [key: string]: number;
+  [key: string]: SpeciesCharacterData;
 }
 
 interface SpeciesData {
@@ -39,7 +44,52 @@ interface SpeciesData {
   count: number;
   percentage: number;
   color: string;
+  characters: { name: string }[];
 }
+
+// Nuevo: Componente para el Modal de Personajes
+const CharacterModal = ({
+  isOpen,
+  onClose,
+  species,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  species: SpeciesData | null;
+}) => {
+  if (!isOpen || !species) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-md">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-yellow-400 flex items-center gap-2">
+            <div
+              className="w-4 h-4 rounded-full"
+              style={{ backgroundColor: species.color }}
+            />
+            Personajes de la especie: {species.name}
+          </CardTitle>
+          <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 max-h-96 overflow-y-auto">
+            {species.characters.map((char) => (
+              <li
+                key={char.name}
+                className="text-white bg-slate-700/50 p-3 rounded-md"
+              >
+                {char.name}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </div>
+    </div>
+  );
+};
 
 const speciesColors = [
   '#fbbf24',
@@ -71,6 +121,12 @@ export default function SpeciesPage() {
   const [loading, setLoading] = useState(false);
   const [totalCharacters, setTotalCharacters] = useState(0);
 
+  // Nuevo: Estados para el modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSpecies, setSelectedSpecies] = useState<SpeciesData | null>(
+    null
+  );
+
   useEffect(() => {
     fetchFilms();
   }, []);
@@ -99,47 +155,39 @@ export default function SpeciesPage() {
       );
       const characters = await Promise.all(characterPromises);
 
-      const speciesUrls = new Set<string>();
-      characters.forEach((char) => {
+      const speciesCount: SpeciesCount = {};
+
+      for (const char of characters) {
         if (char.species.length === 0) {
-          speciesUrls.add('Human');
+          if (!speciesCount['Human']) {
+            speciesCount['Human'] = { name: 'Human', characters: [] };
+          }
+          speciesCount['Human'].characters.push({ name: char.name });
         } else {
-          char.species.forEach((speciesUrl: string) =>
-            speciesUrls.add(speciesUrl)
-          );
-        }
-      });
-
-      const speciesCount: { [key: string]: number } = {};
-
-      for (const speciesUrl of speciesUrls) {
-        if (speciesUrl === 'Human') {
-          const humanCount = characters.filter(
-            (char) => char.species.length === 0
-          ).length;
-          speciesCount['Human'] = humanCount;
-        } else {
-          const speciesResponse = await fetch(speciesUrl);
-          const species = await speciesResponse.json();
-          const count = characters.filter((char) =>
-            char.species.includes(speciesUrl)
-          ).length;
-          speciesCount[species.name] = count;
+          for (const speciesUrl of char.species) {
+            const speciesResponse = await fetch(speciesUrl);
+            const species = await speciesResponse.json();
+            if (!speciesCount[species.name]) {
+              speciesCount[species.name] = {
+                name: species.name,
+                characters: [],
+              };
+            }
+            speciesCount[species.name].characters.push({ name: char.name });
+          }
         }
       }
 
-      const total = Object.values(speciesCount).reduce(
-        (sum, count) => sum + count,
-        0
-      );
+      const total = characters.length;
       setTotalCharacters(total);
 
-      const speciesArray = Object.entries(speciesCount)
-        .map(([name, count], index) => ({
+      const speciesArray = Object.values(speciesCount)
+        .map(({ name, characters: speciesChars }, index) => ({
           name,
-          count,
-          percentage: (count / total) * 100,
+          count: speciesChars.length,
+          percentage: (speciesChars.length / total) * 100,
           color: speciesColors[index % speciesColors.length],
+          characters: speciesChars,
         }))
         .sort((a, b) => b.count - a.count);
 
@@ -152,12 +200,24 @@ export default function SpeciesPage() {
 
   const selectedFilmData = films.find((f) => f.title === selectedFilm);
 
+  // Nuevo: Funciones para manejar el modal
+  const openModalWithSpecies = (species: SpeciesData) => {
+    setSelectedSpecies(species);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedSpecies(null);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center gap-3">
-          <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+          {/* Cambio de color: de purple a blue */}
+          <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
             <BarChart3 className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -218,7 +278,8 @@ export default function SpeciesPage() {
 
       {/* Film Info */}
       {selectedFilmData && (
-        <Card className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-purple-700/50">
+        <Card className="bg-slate-800/50 border-slate-700">
+          {' '}
           <CardHeader>
             <CardTitle className="text-yellow-400">
               Episodio {selectedFilmData.episode_id}: {selectedFilmData.title}
@@ -304,7 +365,8 @@ export default function SpeciesPage() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <BarChart3 className="w-8 h-8 text-purple-400" />
+                  {/* Cambio de color: de purple a yellow */}
+                  <BarChart3 className="w-8 h-8 text-yellow-400" />
                   <div>
                     <p className="text-2xl font-bold text-white">
                       {speciesData[0]?.name}
@@ -323,12 +385,17 @@ export default function SpeciesPage() {
                 Distribución de Especies
               </CardTitle>
               <CardDescription className="text-slate-300">
-                Análisis detallado de la composición demográfica
+                Haz clic en una especie para ver la lista de personajes.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {speciesData.map((species, index) => (
-                <div key={species.name} className="space-y-2">
+              {speciesData.map((species) => (
+                // Nuevo: onClick para abrir el modal
+                <div
+                  key={species.name}
+                  className="space-y-2 p-2 rounded-lg hover:bg-slate-700/50 cursor-pointer transition-colors"
+                  onClick={() => openModalWithSpecies(species)}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div
@@ -378,10 +445,11 @@ export default function SpeciesPage() {
                 {speciesData.map((species) => (
                   <div
                     key={species.name}
-                    className="flex flex-col items-center p-4 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors"
+                    className="flex flex-col items-center p-4 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
                     style={{
                       minWidth: `${Math.max(species.percentage * 2, 80)}px`,
                     }}
+                    onClick={() => openModalWithSpecies(species)}
                   >
                     <div
                       className="w-12 h-12 rounded-full mb-2 flex items-center justify-center text-white font-bold"
@@ -402,6 +470,13 @@ export default function SpeciesPage() {
           </Card>
         </div>
       )}
+
+      {/* Nuevo: Renderizar el modal */}
+      <CharacterModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        species={selectedSpecies}
+      />
     </div>
   );
 }

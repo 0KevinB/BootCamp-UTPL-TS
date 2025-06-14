@@ -74,7 +74,6 @@ export default function PlanetsPage() {
 
       setPlanets(allPlanets);
 
-      // Find most populated planet
       const planetsWithPopulation = allPlanets.filter(
         (planet) =>
           planet.population !== 'unknown' && !isNaN(Number(planet.population))
@@ -135,6 +134,15 @@ export default function PlanetsPage() {
     return 10;
   };
 
+  // --- NUEVA FUNCIÓN AÑADIDA ---
+  const getPopulationColor = (population: string) => {
+    if (population === 'unknown') return 'bg-slate-500';
+    const level = getPopulationLevel(population);
+    if (level >= 80) return 'bg-red-500';
+    if (level >= 40) return 'bg-yellow-400';
+    return 'bg-green-400';
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -174,7 +182,7 @@ export default function PlanetsPage() {
 
       {/* Most Populated Planet Highlight */}
       {mostPopulated && (
-        <Card className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-yellow-600/50">
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-400">
               <Crown className="w-6 h-6" />
@@ -202,20 +210,20 @@ export default function PlanetsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-400">Clima:</span>
-                    <p className="text-white font-medium flex items-center gap-2">
+                    <p className="text-white font-medium flex items-center gap-2 capitalize">
                       {getClimateIcon(mostPopulated.climate)}
                       {mostPopulated.climate}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-400">Terreno:</span>
-                    <p className="text-white font-medium">
+                    <p className="text-white font-medium capitalize">
                       {mostPopulated.terrain}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-400">Gravedad:</span>
-                    <p className="text-white font-medium">
+                    <p className="text-white font-medium capitalize">
                       {mostPopulated.gravity}
                     </p>
                   </div>
@@ -233,7 +241,10 @@ export default function PlanetsPage() {
                   <span className="text-slate-400 text-sm">
                     Nivel de amenaza poblacional:
                   </span>
-                  <Progress value={100} className="h-3 bg-slate-700 mt-2" />
+                  <Progress
+                    value={100}
+                    className="h-3 bg-slate-700 mt-2 [&>div]:bg-white"
+                  />
                   <p className="text-red-400 text-sm mt-1">
                     Máxima prioridad estratégica
                   </p>
@@ -313,7 +324,7 @@ export default function PlanetsPage() {
         </Card>
       </div>
 
-      {/* Planets Grid */}
+      {/* --- SECCIÓN DEL GRID DE PLANETAS ACTUALIZADA --- */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPlanets.map((planet, index) => (
           <Card
@@ -329,7 +340,7 @@ export default function PlanetsPage() {
                 </CardTitle>
                 {getClimateIcon(planet.climate)}
               </div>
-              <CardDescription className="text-slate-300">
+              <CardDescription className="text-slate-300 capitalize">
                 {planet.climate} • {planet.terrain}
               </CardDescription>
             </CardHeader>
@@ -339,12 +350,12 @@ export default function PlanetsPage() {
                   <span className="text-slate-400 text-sm">Población:</span>
                   <Badge
                     variant={
-                      planet.population === 'unknown' ? 'outline' : 'secondary'
+                      planet.population === 'unknown' ? 'outline' : 'default'
                     }
                     className={
                       planet.population === 'unknown'
-                        ? 'border-slate-600'
-                        : 'bg-slate-700'
+                        ? 'border-slate-600 text-slate-400'
+                        : 'bg-slate-200 text-slate-900 font-medium'
                     }
                   >
                     {formatPopulation(planet.population)}
@@ -354,7 +365,9 @@ export default function PlanetsPage() {
                 {planet.population !== 'unknown' && (
                   <Progress
                     value={getPopulationLevel(planet.population)}
-                    className="h-2 bg-slate-700"
+                    className={`h-2 bg-slate-600 [&>div]:${getPopulationColor(
+                      planet.population
+                    )}`}
                   />
                 )}
               </div>
@@ -362,7 +375,7 @@ export default function PlanetsPage() {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-slate-400">Gravedad:</span>
-                  <p className="text-white">{planet.gravity}</p>
+                  <p className="text-white capitalize">{planet.gravity}</p>
                 </div>
                 <div>
                   <span className="text-slate-400">Agua:</span>
