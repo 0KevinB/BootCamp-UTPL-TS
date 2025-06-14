@@ -60,7 +60,7 @@ const CharacterModal = ({
   if (!isOpen || !species) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black flex items-center justify-center p-4 z-50">
       <div className="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-yellow-400 flex items-center gap-2">
